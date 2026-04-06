@@ -10,23 +10,11 @@ app_license = "mit"
 
 # required_apps = []
 
-# Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "frappe_hijri",
-# 		"logo": "/assets/frappe_hijri/logo.png",
-# 		"title": "Frappe Hijri",
-# 		"route": "/frappe_hijri",
-# 		"has_permission": "frappe_hijri.api.permission.has_app_permission"
-# 	}
-# ]
-
 # Includes in <head>
 # ------------------
 
-# include js, css files in header of desk.html
-# app_include_css = "/assets/frappe_hijri/css/frappe_hijri.css"
-# app_include_js = "/assets/frappe_hijri/js/frappe_hijri.js"
+app_include_js = "frappe_hijri.bundle.js"
+app_include_css = "/assets/frappe_hijri/css/hijri_datepicker.css"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/frappe_hijri/css/frappe_hijri.css"
@@ -88,11 +76,24 @@ app_license = "mit"
 # before_install = "frappe_hijri.install.before_install"
 # after_install = "frappe_hijri.install.after_install"
 
+# Migration
+# ---------
+
+before_migrate = ["frappe_hijri.register_hijri_date_type_map"]
+
+# Boot
+# ----
+extend_bootinfo = "frappe_hijri.boot.extend_bootinfo"
+
 # Uninstallation
 # ------------
 
 # before_uninstall = "frappe_hijri.uninstall.before_uninstall"
 # after_uninstall = "frappe_hijri.uninstall.after_uninstall"
+
+# Request Events
+# ----------------
+before_request = ["frappe_hijri.register_hijri_date_type_map"]
 
 # Integration Setup
 # ------------------
@@ -199,8 +200,8 @@ app_license = "mit"
 
 # Request Events
 # ----------------
-# before_request = ["frappe_hijri.utils.before_request"]
-# after_request = ["frappe_hijri.utils.after_request"]
+# before_request = []
+# after_request = []
 
 # Job Events
 # ----------
@@ -249,4 +250,3 @@ app_license = "mit"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

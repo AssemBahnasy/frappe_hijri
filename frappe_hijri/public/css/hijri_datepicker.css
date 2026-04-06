@@ -1,0 +1,211 @@
+/*
+ * Hijri Date Picker — standalone styles (no air-datepicker dependency).
+ * Visually matches Frappe's native datepicker using CSS variables.
+ */
+
+/* Container */
+.hijri-dp {
+    position: absolute;
+    left: 0;
+    top: 100%;
+    z-index: 9999;
+    width: 280px;
+    background: var(--fg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-2xl);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    overflow: hidden;
+    padding: 4px 0;
+}
+
+/* ── Nav ── */
+.hijri-dp-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 8px 4px;
+}
+
+.hijri-dp-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-muted);
+}
+
+.hijri-dp-nav-btn:hover {
+    background: var(--fg-hover-color);
+    color: var(--text-color);
+}
+
+.hijri-dp-nav-title {
+    flex: 1;
+    text-align: center;
+    font-weight: var(--weight-semibold, 600);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-sm);
+    font-size: var(--text-sm);
+}
+
+.hijri-dp-nav-title:hover {
+    background: var(--fg-hover-color);
+}
+
+/* ── Day Names ── */
+.hijri-dp-days-names {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    padding: 8px 8px 0;
+}
+
+.hijri-dp-dn {
+    text-align: center;
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    padding: 4px 0;
+    text-transform: uppercase;
+    font-weight: var(--weight-semibold, 600);
+}
+
+/* ── Cells (shared) ── */
+.hijri-dp-cells {
+    display: grid;
+    padding: 4px 8px;
+    gap: 0;
+}
+
+.hijri-dp-cells-days {
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.hijri-dp-cells-months {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.hijri-dp-cells-years {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.hijri-dp-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: var(--border-radius);
+    transition: background 0.15s;
+}
+
+.hijri-dp-cell:hover {
+    background: var(--fg-hover-color);
+}
+
+/* Day cells */
+.hijri-dp-day {
+    height: 36px;
+    width: 36px;
+    margin: 0 auto;
+    font-size: var(--text-sm);
+}
+
+/* Overflow days from adjacent months */
+.hijri-dp-day.-other- {
+    color: var(--text-muted);
+    opacity: 0.5;
+    cursor: pointer;
+}
+
+.hijri-dp-day.-other-:hover {
+    background: var(--fg-hover-color);
+    opacity: 0.7;
+}
+
+/* Empty cells (placeholder, no interaction) */
+.hijri-dp-empty {
+    cursor: default;
+}
+
+.hijri-dp-empty:hover {
+    background: none;
+}
+
+/* Month cells */
+.hijri-dp-month {
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 4px;
+}
+
+/* Year cells */
+.hijri-dp-year {
+    padding: 12px 4px;
+}
+
+/* ── States ── */
+.-sel- {
+    background: var(--primary);
+    color: #fff;
+    font-weight: var(--weight-bold, 700);
+    border-radius: var(--border-radius);
+}
+
+.-sel-:hover {
+    background: var(--primary);
+}
+
+.-cur-:not(.-sel-) {
+    font-weight: var(--weight-bold, 700);
+    color: var(--primary);
+}
+
+.-other- {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+/* Month cell inner text */
+.hijri-dp-mar {
+    font-size: var(--text-sm);
+    font-weight: 600;
+}
+
+.hijri-dp-men {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+}
+
+.-sel- .hijri-dp-men,
+.-sel- .hijri-dp-mar {
+    color: #fff;
+}
+
+/* ── Footer ── */
+.hijri-dp-footer {
+    border-top: 1px solid var(--border-color);
+    margin-top: 4px;
+    padding: 4px;
+}
+
+.hijri-dp-today {
+    display: block;
+    padding: 7px 16px;
+    cursor: pointer;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    font-weight: var(--weight-medium, 500);
+    text-align: center;
+    border-radius: var(--border-radius-sm);
+}
+
+.hijri-dp-today:hover {
+    background: var(--fg-hover-color);
+    color: var(--text-color);
+}
