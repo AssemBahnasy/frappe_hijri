@@ -261,15 +261,16 @@ frappe.ui.form.ControlHijriDate = class ControlHijriDate extends frappe.ui.form.
 
     parse(value) {
         if (!value) return "";
-        // Try parsing from user display format first
-        let sys = frappe_hijri.hijri.parseHijriDate(value);
-        if (!sys) {
-            // Fallback: try system format directly (YYYY-MM-DD)
-            let p = value.split("-").map(Number);
-            if (p.length === 3 && !isNaN(p[0]) && p[0] > 0 && p[1] >= 1 && p[1] <= 12 && p[2] >= 1) {
-                sys = `${p[0]}-${String(p[1]).padStart(2, "0")}-${String(p[2]).padStart(2, "0")}`;
+        // Check if already in system format YYYY-MM-DD (year > 31 distinguishes from dd-...)
+        let parts = value.split("-").map(Number);
+        if (parts.length === 3 && !isNaN(parts[0]) && parts[0] > 31 && parts[1] >= 1 && parts[1] <= 12 && parts[2] >= 1) {
+            let maxDay = frappe_hijri.hijri.hijriMonthDays(parts[0], parts[1]);
+            if (parts[2] <= maxDay) {
+                return `${parts[0]}-${String(parts[1]).padStart(2, "0")}-${String(parts[2]).padStart(2, "0")}`;
             }
         }
+        // Try parsing from user display format
+        let sys = frappe_hijri.hijri.parseHijriDate(value);
         if (!sys) return "";
         let p = sys.split("-").map(Number);
         if (p[1] < 1 || p[1] > 12 || p[2] < 1) return "";
