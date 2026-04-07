@@ -14,13 +14,14 @@ This document describes the internal architecture, every file, every override, a
 6. [Python: Hooks (`hooks.py`)](#6-python-hooks-hookspy)
 7. [JavaScript: Conversion Library (`hijri_utils.js`)](#7-javascript-conversion-library-hijri_utilsjs)
 8. [JavaScript: Datepicker Control (`hijri_date.js`)](#8-javascript-datepicker-control-hijri_datejs)
-9. [JavaScript: Form Builder Patch (`form_builder_patch.js`)](#9-javascript-form-builder-patch-form_builder_patchjs)
-10. [JavaScript: Bundle Entry Point (`frappe_hijri.bundle.js`)](#10-javascript-bundle-entry-point-frappe_hijribundlejs)
-11. [CSS: Datepicker Styles (`hijri_datepicker.css`)](#11-css-datepicker-styles-hijri_datepickercss)
-12. [DocType: Hijri Settings](#12-doctype-hijri-settings)
-13. [Date Format Pipeline](#13-date-format-pipeline)
-14. [Dependencies](#14-dependencies)
-15. [Conversion Algorithms](#15-conversion-algorithms)
+9. [JavaScript: Read-Only Formatter (`formatters.js`)](#9-javascript-read-only-formatter-formattersjs)
+10. [JavaScript: Form Builder Patch (`form_builder_patch.js`)](#10-javascript-form-builder-patch-form_builder_patchjs)
+11. [JavaScript: Bundle Entry Point (`frappe_hijri.bundle.js`)](#11-javascript-bundle-entry-point-frappe_hijribundlejs)
+12. [CSS: Datepicker Styles (`hijri_datepicker.css`)](#12-css-datepicker-styles-hijri_datepickercss)
+13. [DocType: Hijri Settings](#13-doctype-hijri-settings)
+14. [Date Format Pipeline](#14-date-format-pipeline)
+15. [Dependencies](#15-dependencies)
+16. [Conversion Algorithms](#16-conversion-algorithms)
 
 ---
 
@@ -50,6 +51,11 @@ Frappe does not support custom fieldtypes via any public API. Adding `"Hijri Dat
 │  │ (hijri_date.js)    │   │ (form_builder_     │                  │
 │  │                    │   │  patch.js)         │                  │
 │  └───────────────────┘   └───────────────────┘                  │
+│                                                                 │
+│  ┌───────────────────────────────────────────┐                  │
+│  │ frappe.form.formatters.HijriDate           │                  │
+│  │ (formatters.js) — read-only display        │                  │
+│  └───────────────────────────────────────────┘                  │
 │                                                                 │
 │  ┌───────────────────┐   ┌───────────────────┐                  │
 │  │ frappe_hijri.hijri │   │ frappe_hijri.api.  │                  │
@@ -96,7 +102,8 @@ frappe_hijri/
     ├── css/
     │   └── hijri_datepicker.css          # Datepicker styles (~192 lines)
     └── js/
-        ├── frappe_hijri.bundle.js        # Entry point (3 imports)
+        ├── frappe_hijri.bundle.js        # Entry point (4 imports)
+        ├── formatters.js                 # frappe.form.formatters.HijriDate for read-only display
         ├── form_builder_patch.js         # Vue component + FormBuilder monkey-patch
         ├── controls/
         │   └── hijri_date.js             # ControlHijriDate class (~300 lines)
@@ -517,10 +524,10 @@ Sets the `<input>` element's visible value using `format_for_input()`.
 
 #### `parse(value)`
 
-Converts user input back to system format. Tries two strategies:
+Converts user input back to system format. Tries two strategies in order:
 
-1. `frappe_hijri.hijri.parseHijriDate(value)` — parses using the configured format
-2. Fallback: tries splitting by `-` assuming system format (`YYYY-MM-DD`)
+1. **System-format detection:** Splits by `-` and checks if the first segment is > 31. Since Hijri years are always > 1000 and days are always ≤ 30, a first segment > 31 unambiguously identifies a `YYYY-MM-DD` system-format value. This is critical because Frappe's `get_status()` calls `parse()` on the raw DB value during read-only rendering — without this check, `parseHijriDate()` would misinterpret the year as a day when the user format is e.g. `dd-mm-yyyy`, producing an invalid date that causes the field to be hidden.
+2. **User-format parsing:** Calls `frappe_hijri.hijri.parseHijriDate(value)` to parse using the configured display format.
 
 After parsing, validates that month is 1–12 and day doesn't exceed the month length.
 
@@ -532,7 +539,29 @@ Called by Frappe's form engine after `parse()`. Performs the same month/day rang
 
 ---
 
-## 9. JavaScript: Form Builder Patch (`form_builder_patch.js`)
+## 9. JavaScript: Read-Only Formatter (`formatters.js`)
+
+**Location:** `frappe_hijri/public/js/formatters.js`
+
+Registers `frappe.form.formatters.HijriDate` so that Frappe's `set_disp_area()` can render Hijri dates in the user's configured format when the field is read-only (e.g. on submitted documents).
+
+```javascript
+frappe.form.formatters.HijriDate = function (value) {
+    if (!value) return "";
+    if (frappe_hijri?.hijri?.formatHijriDate) {
+        return frappe_hijri.hijri.formatHijriDate(value);
+    }
+    return value;
+};
+```
+
+**How Frappe resolves it:** `frappe.form.get_formatter(fieldtype)` strips spaces from the fieldtype name (`"Hijri Date"` → `"HijriDate"`) and looks up `frappe.form.formatters.HijriDate`.
+
+**When it runs:** Whenever a Hijri Date field is in "Read" display status — submitted documents, read-only fields, list views, and print formats.
+
+---
+
+## 10. JavaScript: Form Builder Patch (`form_builder_patch.js`)
 
 **Location:** `frappe_hijri/public/js/form_builder_patch.js`
 
@@ -589,12 +618,13 @@ Also pushes `"Hijri Date"` into `frappe.model.all_fieldtypes` so it appears in t
 
 ---
 
-## 10. JavaScript: Bundle Entry Point (`frappe_hijri.bundle.js`)
+## 11. JavaScript: Bundle Entry Point (`frappe_hijri.bundle.js`)
 
 **Location:** `frappe_hijri/public/js/frappe_hijri.bundle.js`
 
 ```javascript
 import "./utils/hijri_utils.js";
+import "./formatters.js";
 import "./controls/hijri_date.js";
 import "./form_builder_patch.js";
 ```
@@ -602,14 +632,15 @@ import "./form_builder_patch.js";
 **Import order matters:**
 
 1. `hijri_utils.js` — must load first to create `frappe_hijri.hijri` namespace
-2. `hijri_date.js` — depends on `frappe_hijri.hijri` for conversions
-3. `form_builder_patch.js` — depends on the control being registered
+2. `formatters.js` — depends on `frappe_hijri.hijri.formatHijriDate()` for formatting; must register `frappe.form.formatters.HijriDate` before any form renders
+3. `hijri_date.js` — depends on `frappe_hijri.hijri` for conversions
+4. `form_builder_patch.js` — depends on the control being registered
 
-esbuild compiles this into a single hashed file in `dist/js/` (e.g. `frappe_hijri.bundle.D3D4NSGQ.js`, ~10 KB).
+esbuild compiles this into a single hashed file in `dist/js/` (e.g. `frappe_hijri.bundle.JYGZTZRF.js`, ~11 KB).
 
 ---
 
-## 11. CSS: Datepicker Styles (`hijri_datepicker.css`)
+## 12. CSS: Datepicker Styles (`hijri_datepicker.css`)
 
 **Location:** `frappe_hijri/public/css/hijri_datepicker.css`
 
@@ -654,7 +685,7 @@ All styling references Frappe's CSS custom properties:
 
 ---
 
-## 12. DocType: Hijri Settings
+## 13. DocType: Hijri Settings
 
 **Location:** `frappe_hijri/frappe_hijri/doctype/hijri_settings/`
 
@@ -681,7 +712,7 @@ No custom validation or processing — the value is read by `get_hijri_date_form
 
 ---
 
-## 13. Date Format Pipeline
+## 14. Date Format Pipeline
 
 The date format flows through the system following the same pattern as Frappe's System Settings `date_format`:
 
@@ -708,8 +739,11 @@ getDateFormat()            ← hijri_utils.js (reads from frappe.boot)
     ControlHijriDate
     ├── format_for_input()   → calls formatHijriDate()
     ├── set_formatted_input() → calls format_for_input()
-    ├── parse()              → calls parseHijriDate()
+    ├── parse()              → detects system format first, then calls parseHijriDate()
     └── validate()           → shows getDateFormat() in error messages
+
+    frappe.form.formatters.HijriDate   ← formatters.js
+    └── set_disp_area()      → calls formatHijriDate() for read-only rendering
 ```
 
 ### Storage vs Display
@@ -724,7 +758,7 @@ getDateFormat()            ← hijri_utils.js (reads from frappe.boot)
 
 ---
 
-## 14. Dependencies
+## 15. Dependencies
 
 ### Python
 
@@ -748,7 +782,7 @@ No external JS dependencies. The Kuwaiti Algorithm is implemented as a pure Java
 
 ---
 
-## 15. Conversion Algorithms
+## 16. Conversion Algorithms
 
 ### Server-Side: Umm al-Qura (via `hijri-converter`)
 
