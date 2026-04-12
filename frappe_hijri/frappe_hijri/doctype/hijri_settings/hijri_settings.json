@@ -16,6 +16,7 @@
    "label": "Date Defaults"
   },
   {
+   "default": "dd-mm-yyyy",
    "fieldname": "date_format",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -32,7 +33,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-12 03:33:24.755664",
+ "modified": "2026-04-12 17:54:25.212885",
  "modified_by": "Administrator",
  "module": "Frappe Hijri",
  "name": "Hijri Settings",
