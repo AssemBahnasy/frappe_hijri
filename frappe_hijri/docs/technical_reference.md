@@ -40,8 +40,9 @@ Frappe does not support custom fieldtypes via any public API. Adding `"Hijri Dat
 │           │                      │                    │         │
 │  ┌────────┴──────────────────────┴────────────────────┴──────┐  │
 │  │              frappe_hijri/__init__.py                      │  │
+│  │  _patch_mariadb_class()          ← class-level fix        │  │
 │  │  _register_hijri_date_fieldtype()                         │  │
-│  │  register_hijri_date_type_map()                           │  │
+│  │  register_hijri_date_type_map()  ← instance safety net    │  │
 │  │  _patch_docfield_fieldtype_options()                       │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                                                                 │
@@ -72,8 +73,11 @@ Frappe does not support custom fieldtypes via any public API. Adding `"Hijri Dat
 
 ### Execution Timeline
 
-1. **Import time** — `__init__.py` runs `_register_hijri_date_fieldtype()`. Adds `"Hijri Date"` to `frappe.model.data_fieldtypes`.
-2. **Every HTTP request** — `before_request` hook calls `register_hijri_date_type_map()`. Adds type_map entry and patches DocField meta.
+1. **Import time** — `__init__.py` runs:
+   - `_patch_mariadb_class()` — wraps `MariaDBDatabase.setup_type_map` at the **class level** so every future database instance, regardless of when it is created, automatically includes `"Hijri Date" → ("varchar", 10)`. Idempotent via `_hijri_type_map_patched` sentinel.
+   - Patches the current `frappe.db` instance if it already exists (constructed before this module was imported).
+   - `_register_hijri_date_fieldtype()` — adds `"Hijri Date"` to `frappe.model.data_fieldtypes`.
+2. **Every HTTP request** — `before_request` hook calls `register_hijri_date_type_map()`. Patches the current `frappe.db` instance (safety net) and DocField meta.
 3. **Every migration** — `before_migrate` hook calls the same function so `bench migrate` creates `varchar(10)` columns.
 4. **Page load (boot)** — `extend_bootinfo` sends `hijri_date_format` to the client.
 5. **Desk render** — The JS bundle registers `ControlHijriDate`, patches FormBuilder, and exposes `frappe_hijri.hijri` utilities.
@@ -117,7 +121,42 @@ frappe_hijri/
 
 **Location:** `frappe_hijri/__init__.py`
 
-This file runs at import time and provides three internal functions plus one public helper.
+This file runs at import time and provides four internal functions plus one public helper.
+
+### `_patch_mariadb_class()` ← Primary Fix
+
+Called at module load (bottom of file). Wraps `MariaDBDatabase.setup_type_map` at the **class level** so that `"Hijri Date" → ("varchar", 10)` is injected into every future database instance automatically.
+
+**Why this is the root fix:** `Database.__init__()` calls `self.setup_type_map()` which assigns a **brand-new dict** to `self.type_map`. Any approach that patches an existing instance (including `before_migrate`, `before_request`, or utility helpers) is fragile:
+
+| Scenario | `before_migrate` / instance patch | Class-level patch |
+|---|---|---|
+| `bench migrate` | ✅ works | ✅ works |
+| `bench install-app` | ❌ `before_migrate` never fires | ✅ always works |
+| DB reconnect mid-process | ❌ new instance loses the patch | ✅ always works |
+
+**Implementation:**
+
+```python
+def _patch_mariadb_class():
+    from frappe.database.mariadb.database import MariaDBDatabase
+
+    if getattr(MariaDBDatabase, "_hijri_type_map_patched", False):
+        return  # idempotency sentinel
+
+    _original = MariaDBDatabase.setup_type_map
+
+    def _patched_setup_type_map(self):
+        _original(self)
+        self.type_map["Hijri Date"] = ("varchar", 10)
+
+    MariaDBDatabase.setup_type_map = _patched_setup_type_map
+    MariaDBDatabase._hijri_type_map_patched = True
+```
+
+**Idempotent:** The `_hijri_type_map_patched` attribute on the class prevents double-wrapping if the module is somehow imported multiple times.
+
+---
 
 ### `_register_hijri_date_fieldtype()`
 
@@ -135,10 +174,10 @@ Called at module load (bottom of file). Appends `"Hijri Date"` to `frappe.model.
 
 ### `register_hijri_date_type_map()`
 
-Called by `before_request` and `before_migrate` hooks. Performs three actions:
+Called by `before_request` and `before_migrate` hooks. Acts as a **safety net** for the current process's `frappe.db` instance (which may have been constructed before `frappe_hijri` was imported). Performs three actions:
 
 1. Calls `_register_hijri_date_fieldtype()` (idempotent)
-2. Adds `"Hijri Date" → ("varchar", 10)` to `frappe.db.type_map` — this tells `bench migrate` to create `VARCHAR(10)` columns for Hijri Date fields
+2. Adds `"Hijri Date" → ("varchar", 10)` to `frappe.db.type_map` if not already present — covers the case where `frappe.db` was constructed before `_patch_mariadb_class()` ran
 3. Calls `_patch_docfield_fieldtype_options()`
 
 ### `_patch_docfield_fieldtype_options()`
