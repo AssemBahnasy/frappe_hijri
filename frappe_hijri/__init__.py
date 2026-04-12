@@ -119,6 +119,16 @@ if frappe.db and hasattr(frappe.db, "type_map") and "Hijri Date" not in frappe.d
 _register_hijri_date_fieldtype()
 
 
+def ensure_hijri_type_map_for_install(app_name):
+    """Called by before_app_install hook before any app's sync_for runs.
+
+    This is the primary entry point for bench install-app scenarios.
+    `before_migrate` does NOT fire during install-app, so this hook is the
+    only reliable way to set the type_map before schema sync.
+    """
+    register_hijri_date_type_map()
+
+
 def get_hijri_date_format():
     """Return the configured Hijri date format, defaulting to yyyy-mm-dd."""
     try:

@@ -73,14 +73,15 @@ Frappe does not support custom fieldtypes via any public API. Adding `"Hijri Dat
 
 ### Execution Timeline
 
-1. **Import time** — `__init__.py` runs:
-   - `_patch_mariadb_class()` — wraps `MariaDBDatabase.setup_type_map` at the **class level** so every future database instance, regardless of when it is created, automatically includes `"Hijri Date" → ("varchar", 10)`. Idempotent via `_hijri_type_map_patched` sentinel.
-   - Patches the current `frappe.db` instance if it already exists (constructed before this module was imported).
+1. **`bench install-app <any-app>`** — `before_app_install` hook calls `ensure_hijri_type_map_for_install()`, which imports `frappe_hijri.__init__` and triggers steps below *before* `sync_for` runs. This is the critical entry point that was previously missing.
+2. **Import time** (triggered by the above or any other import) — `__init__.py` runs:
+   - `_patch_mariadb_class()` — wraps `MariaDBDatabase.setup_type_map` at the **class level** so every future database instance automatically includes `"Hijri Date" → ("varchar", 10)`. Idempotent via `_hijri_type_map_patched` sentinel.
+   - Patches the current `frappe.db` instance if it already exists.
    - `_register_hijri_date_fieldtype()` — adds `"Hijri Date"` to `frappe.model.data_fieldtypes`.
-2. **Every HTTP request** — `before_request` hook calls `register_hijri_date_type_map()`. Patches the current `frappe.db` instance (safety net) and DocField meta.
-3. **Every migration** — `before_migrate` hook calls the same function so `bench migrate` creates `varchar(10)` columns.
-4. **Page load (boot)** — `extend_bootinfo` sends `hijri_date_format` to the client.
-5. **Desk render** — The JS bundle registers `ControlHijriDate`, patches FormBuilder, and exposes `frappe_hijri.hijri` utilities.
+3. **Every HTTP request** — `before_request` hook calls `register_hijri_date_type_map()`. Patches the current `frappe.db` instance (safety net) and DocField meta.
+4. **Every migration** — `before_migrate` hook calls the same function so `bench migrate` creates `varchar(10)` columns.
+5. **Page load (boot)** — `extend_bootinfo` sends `hijri_date_format` to the client.
+6. **Desk render** — The JS bundle registers `ControlHijriDate`, patches FormBuilder, and exposes `frappe_hijri.hijri` utilities.
 
 ---
 
@@ -89,7 +90,7 @@ Frappe does not support custom fieldtypes via any public API. Adding `"Hijri Dat
 ```
 frappe_hijri/
 ├── __init__.py                          # Fieldtype registration + get_hijri_date_format()
-├── hooks.py                             # app_include_js/css, before_request, before_migrate, extend_bootinfo
+├── hooks.py                             # app_include_js/css, before_app_install, before_request, before_migrate, extend_bootinfo
 ├── boot.py                              # Sends hijri_date_format to client via bootinfo
 ├── modules.txt                          # "Frappe Hijri"
 ├── patches.txt                          # (empty)
@@ -121,7 +122,7 @@ frappe_hijri/
 
 **Location:** `frappe_hijri/__init__.py`
 
-This file runs at import time and provides four internal functions plus one public helper.
+This file runs at import time and provides four internal functions, one public hook handler, and one public helper.
 
 ### `_patch_mariadb_class()` ← Primary Fix
 
@@ -198,6 +199,22 @@ for field in meta.fields:
 ```
 
 This runs on every request (via `before_request`) because Frappe may rebuild the meta cache at any time.
+
+### `ensure_hijri_type_map_for_install(app_name)` ← Install Entry Point
+
+Called by the `before_app_install` hook. Receives the name of the app being installed (e.g. `"regiment"`) but ignores it — its only job is to call `register_hijri_date_type_map()` before Frappe calls `sync_for()` for that app.
+
+**Why this is necessary:** During `bench install-app`, Frappe **never fires `before_migrate`**. It reads hook names from `hooks.py` but does not import `frappe_hijri.__init__` — meaning `_patch_mariadb_class()` never runs. `before_app_install` is the only hook that:
+- fires during `bench install-app` (not just `migrate`)
+- is called with the real Python function (forcing the import)
+- fires **before** `sync_for` creates database tables
+
+```python
+def ensure_hijri_type_map_for_install(app_name):
+    register_hijri_date_type_map()
+```
+
+---
 
 ### `get_hijri_date_format()`
 
@@ -314,8 +331,7 @@ frappe.call({
 | Hook | Value | Purpose |
 |------|-------|---------|
 | `app_include_js` | `"frappe_hijri.bundle.js"` | Loads the compiled JS bundle on every desk page. Uses the short form so Frappe resolves it to the hashed dist file (e.g. `frappe_hijri.bundle.5VMD5CKU.js`) |
-| `app_include_css` | `"/assets/frappe_hijri/css/hijri_datepicker.css"` | Loads datepicker styles. Uses full path since CSS is not bundled by esbuild |
-| `before_migrate` | `["frappe_hijri.register_hijri_date_type_map"]` | Ensures `type_map` and DocField meta are patched before `bench migrate` runs |
+| `app_include_css` | `"/assets/frappe_hijri/css/hijri_datepicker.css"` | Loads datepicker styles. Uses full path since CSS is not bundled by esbuild || `before_app_install` | `["frappe_hijri.ensure_hijri_type_map_for_install"]` | **Primary install fix.** Fires before any app's `sync_for` during `bench install-app`, ensuring `"Hijri Date"` is in `type_map` before tables are created || `before_migrate` | `["frappe_hijri.register_hijri_date_type_map"]` | Ensures `type_map` and DocField meta are patched before `bench migrate` runs |
 | `extend_bootinfo` | `"frappe_hijri.boot.extend_bootinfo"` | Sends `hijri_date_format` to the client |
 | `before_request` | `["frappe_hijri.register_hijri_date_type_map"]` | Re-patches `type_map` and DocField meta on every HTTP request (since Frappe may rebuild the meta cache) |
 

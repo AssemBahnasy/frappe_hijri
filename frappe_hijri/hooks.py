@@ -81,6 +81,13 @@ app_include_css = "/assets/frappe_hijri/css/hijri_datepicker.css"
 
 before_migrate = ["frappe_hijri.register_hijri_date_type_map"]
 
+# App Install / Uninstall
+# -----------------------
+# Fires before any app's schema is synced. This is the only hook that runs
+# during `bench install-app` BEFORE sync_for — critical for ensuring the
+# 'Hijri Date' type_map entry exists before any app's DocTypes are created.
+before_app_install = ["frappe_hijri.ensure_hijri_type_map_for_install"]
+
 # Boot
 # ----
 extend_bootinfo = "frappe_hijri.boot.extend_bootinfo"
