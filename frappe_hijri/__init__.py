@@ -3,6 +3,45 @@ __version__ = "0.0.1"
 import frappe
 
 
+# ---------------------------------------------------------------------------
+# Core fix: patch MariaDBDatabase at the CLASS level
+# ---------------------------------------------------------------------------
+# Root cause: Database.__init__() calls self.setup_type_map() which creates
+# a fresh new dict for self.type_map on EVERY instance.  Any approach that
+# adds "Hijri Date" to an existing frappe.db instance is fragile — it works
+# for the current bench migrate run, but breaks during bench install-app
+# (where before_migrate never fires) and on any reconnect.
+#
+# The fix: wrap setup_type_map() on the class itself so that every future
+# MariaDBDatabase instance — whether created during install, migrate, or a
+# web request — always includes "Hijri Date" in its type_map.
+# ---------------------------------------------------------------------------
+
+
+def _patch_mariadb_class():
+    """Wrap MariaDBDatabase.setup_type_map at the class level.
+
+    Idempotent: the sentinel attribute _hijri_type_map_patched prevents
+    double-wrapping if this module is somehow imported twice.
+    """
+    try:
+        from frappe.database.mariadb.database import MariaDBDatabase
+    except ImportError:
+        return  # non-MariaDB environment — nothing to do
+
+    if getattr(MariaDBDatabase, "_hijri_type_map_patched", False):
+        return
+
+    _original = MariaDBDatabase.setup_type_map
+
+    def _patched_setup_type_map(self):
+        _original(self)
+        self.type_map["Hijri Date"] = ("varchar", 10)
+
+    MariaDBDatabase.setup_type_map = _patched_setup_type_map
+    MariaDBDatabase._hijri_type_map_patched = True
+
+
 def _register_hijri_date_fieldtype():
     """Register 'Hijri Date' so Frappe treats it as a data-bearing field.
 
@@ -30,8 +69,15 @@ def _register_hijri_date_fieldtype():
 
 
 def register_hijri_date_type_map():
-    """Add 'Hijri Date' to frappe.db.type_map so it maps to a varchar(10) column."""
+    """Register 'Hijri Date' in both frappe.db.type_map and data_fieldtypes.
+
+    Called via before_migrate and before_request hooks as an additional safety
+    net.  The class-level patch in _patch_mariadb_class() is the primary fix
+    and handles all new instances; this function patches the *current* instance
+    in case it was constructed before our module was first imported.
+    """
     _register_hijri_date_fieldtype()
+    # Patch current instance (created before our class-level patch ran)
     if frappe.db and hasattr(frappe.db, "type_map") and "Hijri Date" not in frappe.db.type_map:
         frappe.db.type_map["Hijri Date"] = ("varchar", 10)
     _patch_docfield_fieldtype_options()
@@ -58,6 +104,18 @@ def _patch_docfield_fieldtype_options():
             break
 
 
+# ---------------------------------------------------------------------------
+# Module-level initialization — runs once when frappe_hijri is first imported
+# ---------------------------------------------------------------------------
+
+# 1. Patch the class so ALL future MariaDBDatabase instances include Hijri Date.
+_patch_mariadb_class()
+
+# 2. Patch the *current* frappe.db instance if it already exists.
+if frappe.db and hasattr(frappe.db, "type_map") and "Hijri Date" not in frappe.db.type_map:
+    frappe.db.type_map["Hijri Date"] = ("varchar", 10)
+
+# 3. Register Hijri Date as a Frappe model data fieldtype.
 _register_hijri_date_fieldtype()
 
 
