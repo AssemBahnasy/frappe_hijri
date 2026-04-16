@@ -81,6 +81,10 @@ app_include_css = "/assets/frappe_hijri/css/hijri_datepicker.css"
 
 before_migrate = ["frappe_hijri.register_hijri_date_type_map"]
 
+# Fires before any test suite runs for the app being tested.
+# Also called with app_name=frappe_hijri when running frappe_hijri tests directly.
+before_tests = ["frappe_hijri.register_hijri_date_type_map"]
+
 # App Install / Uninstall
 # -----------------------
 # Fires before any app's schema is synced. This is the only hook that runs

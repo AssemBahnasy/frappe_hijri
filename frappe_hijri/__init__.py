@@ -19,27 +19,45 @@ import frappe
 
 
 def _patch_mariadb_class():
-    """Wrap MariaDBDatabase.setup_type_map at the class level.
+    """Wrap setup_type_map at the class level for ALL MariaDB implementations.
+
+    Frappe ships two separate MariaDBDatabase classes:
+      - frappe.database.mariadb.database.MariaDBDatabase  (PyMySQL driver)
+      - frappe.database.mariadb.mysqlclient.MariaDBDatabase (mysqlclient / default)
+
+    get_db() uses the mysqlclient variant when ``use_mysqlclient=1`` (the default).
+    Both classes have their own independent setup_type_map() so we must patch
+    each one explicitly.
 
     Idempotent: the sentinel attribute _hijri_type_map_patched prevents
     double-wrapping if this module is somehow imported twice.
     """
+
+    def _apply_patch(cls):
+        if getattr(cls, "_hijri_type_map_patched", False):
+            return
+        _original = cls.setup_type_map
+
+        def _patched_setup_type_map(self):
+            _original(self)
+            self.type_map["Hijri Date"] = ("varchar", 10)
+
+        cls.setup_type_map = _patched_setup_type_map
+        cls._hijri_type_map_patched = True
+
+    # Patch the standard PyMySQL-backed driver
     try:
-        from frappe.database.mariadb.database import MariaDBDatabase
+        from frappe.database.mariadb.database import MariaDBDatabase as _StdMariaDB
+        _apply_patch(_StdMariaDB)
     except ImportError:
-        return  # non-MariaDB environment — nothing to do
+        pass
 
-    if getattr(MariaDBDatabase, "_hijri_type_map_patched", False):
-        return
-
-    _original = MariaDBDatabase.setup_type_map
-
-    def _patched_setup_type_map(self):
-        _original(self)
-        self.type_map["Hijri Date"] = ("varchar", 10)
-
-    MariaDBDatabase.setup_type_map = _patched_setup_type_map
-    MariaDBDatabase._hijri_type_map_patched = True
+    # Patch the mysqlclient-backed driver (used by default when use_mysqlclient=1)
+    try:
+        from frappe.database.mariadb.mysqlclient import MariaDBDatabase as _MysqlclientMariaDB
+        _apply_patch(_MysqlclientMariaDB)
+    except ImportError:
+        pass
 
 
 def _register_hijri_date_fieldtype():
