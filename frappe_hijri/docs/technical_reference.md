@@ -263,7 +263,14 @@ def extend_bootinfo(bootinfo):
 | **Decorator** | `@frappe.whitelist()` |
 | **Parameter** | `date` — Gregorian date string in `YYYY-MM-DD` format |
 | **Returns** | `dict` with keys: `year`, `month`, `day`, `formatted`, `month_name`, `month_name_ar` |
-| **Errors** | Throws `frappe.ValidationError` with title "Invalid Gregorian Date" |
+| **Errors** | Throws `frappe.ValidationError` (title: "Invalid Gregorian Date") only for structurally invalid dates (e.g. month 13). Out-of-range dates (pre-~1925 CE) are handled by a tabular fallback — see [§16.2](#162-server-side-fallback-meeus-tabular-algorithm). |
+
+**Algorithm selection:**
+
+| Date range | Algorithm | Accuracy |
+|---|---|---|
+| ~1925 CE → present | `hijri-converter` (Umm al-Qura) | Exact (astronomical) |
+| Any date ≥ 622 CE | Meeus Tabular (fallback) | ±1–2 days |
 
 **Example call:**
 
@@ -277,6 +284,23 @@ frappe.call({
         //   formatted: "1446-10-08",
         //   month_name: "Shawwal",
         //   month_name_ar: "شوال"
+        // }
+    }
+});
+```
+
+**Example — historical date (pre-1925 CE):**
+
+```javascript
+frappe.call({
+    method: "frappe_hijri.api.hijri.gregorian_to_hijri",
+    args: { date: "1907-01-25" },
+    callback: (r) => {
+        // r.message = {
+        //   year: 1324, month: 12, day: 10,
+        //   formatted: "1324-12-10",
+        //   month_name: "Dhu al-Hijjah",
+        //   month_name_ar: "ذو الحجة"
         // }
     }
 });
@@ -839,11 +863,60 @@ No external JS dependencies. The Kuwaiti Algorithm is implemented as a pure Java
 
 ## 16. Conversion Algorithms
 
-### Server-Side: Umm al-Qura (via `hijri-converter`)
+### 16.1 Server-Side: Umm al-Qura (via `hijri-converter`)
 
-The `hijri-converter` Python library uses pre-computed Umm al-Qura calendar data — the official Islamic calendar of Saudi Arabia. It is based on astronomical lunar observations and is accurate for years 1343–1500 AH.
+The `hijri-converter` Python library uses pre-computed Umm al-Qura calendar data — the official Islamic calendar of Saudi Arabia. It is based on astronomical lunar observations and is accurate for years **1343–1500 AH (~1925–2076 CE)**. Dates outside this range raise `OverflowError`.
 
-### Client-Side: Kuwaiti Algorithm
+### 16.2 Server-Side Fallback: Meeus Tabular Algorithm
+
+When `hijri-converter` raises `OverflowError` (i.e. the input date is before ~1925 CE), `gregorian_to_hijri()` automatically falls back to a pure arithmetic implementation of the **Meeus tabular Islamic calendar**. This requires no lookup tables and works for any Gregorian date after the Islamic epoch (622 CE).
+
+**When it activates:** `gregorian_to_hijri()` catches `OverflowError` and calls `_gregorian_to_hijri_tabular(year, month, day)` instead of returning `None` or raising an error.
+
+**Accuracy:** ±1–2 days vs. the Umm al-Qura calendar. This is the standard precision for historical Islamic dates.
+
+**Step 1 — Gregorian → Julian Day Number (JDN)**
+
+Uses the standard proleptic Gregorian formula:
+
+$$a = \left\lfloor\frac{14 - m}{12}\right\rfloor, \quad y = Y + 4800 - a, \quad m' = M + 12a - 3$$
+
+$$\text{JDN} = D + \left\lfloor\frac{153m' + 2}{5}\right\rfloor + 365y + \left\lfloor\frac{y}{4}\right\rfloor - \left\lfloor\frac{y}{100}\right\rfloor + \left\lfloor\frac{y}{400}\right\rfloor - 32045$$
+
+**Step 2 — JDN → Hijri (Meeus tabular algorithm)**
+
+```
+l = JDN − 1948440 + 10632
+n = (l − 1) ÷ 10631                     # 30-year cycle count
+l = l − 10631n + 354
+j = ⌊(10985−l)/5316⌋ × ⌊50l/17719⌋
+  + ⌊l/5670⌋ × ⌊43l/15238⌋            # year-within-cycle (1–30)
+l = l − ⌊(30−j)/15⌋ × ⌊17719j/50⌋
+  − ⌊j/16⌋ × ⌊15238j/43⌋ + 29
+
+H_year  = 30n + j − 30
+H_month = ⌊24l / 709⌋
+H_day   = l − ⌊709 × H_month / 24⌋
+```
+
+**Verification against the Umm al-Qura library (dates within range):**
+
+| Gregorian | Tabular result | Library result | Match |
+|---|---|---|---|
+| 1930-05-10 | 1348-12-11 | 1348-12-11 | ✅ exact |
+| 1925-03-01 | 1343-09-06 | 1343-09-06 | ✅ exact |
+
+**Historical dates (tabular only):**
+
+| Gregorian | Tabular result | Notes |
+|---|---|---|
+| 1907-01-25 | 1324-12-10 | Typical birth date scenario |
+| 1900-01-01 | 1317-08-28 | |
+| 1800-06-15 | 1215-01-22 | |
+
+**Month name tables** (`_MONTH_NAMES_EN`, `_MONTH_NAMES_AR`) are module-level constants (index 0 unused) since the `hijri-converter` library's `.month_name()` method is unavailable for the fallback path.
+
+### 16.3 16.3 Client-Side: Kuwaiti Algorithm
 
 The JavaScript implementation uses the Kuwaiti Algorithm, an arithmetic approximation of the Islamic calendar. It converts via Julian Day Number as an intermediate:
 
@@ -855,7 +928,15 @@ The JavaScript implementation uses the Kuwaiti Algorithm, an arithmetic approxim
 1. Convert Hijri to Julian Day Number
 2. Convert JDN to Gregorian
 
-### Discrepancy Between Algorithms
+### 16.4 Algorithm Comparison
+
+| Algorithm | Location | Range | Accuracy | Used for |
+|---|---|---|---|---|
+| Umm al-Qura (`hijri-converter`) | Python | 1343–1500 AH (~1925–2076 CE) | Exact (astronomical) | Primary server-side conversion |
+| Meeus Tabular | Python (fallback) | Any date ≥ 622 CE | ±1–2 days | Pre-1925 CE server-side conversion |
+| Kuwaiti Algorithm | JavaScript | Practical range | ±1–2 days | All client-side conversion (datepicker, display) |
+
+### 16.5 Discrepancy Handling
 
 The Kuwaiti Algorithm and Umm al-Qura may differ by ±1–2 days for some dates. This is handled by the **day clamping** logic in `hijri_to_gregorian()`:
 
