@@ -212,8 +212,10 @@
 			const g1 = frappe_hijri.hijri.hijriToGregorian(hy, hm, 1);
 			const dow = new Date(g1.year, g1.month - 1, g1.day).getDay();
 			const ar = frappe_hijri.hijri.getMonthName(hm);
+			const en = frappe_hijri.hijri.getMonthNameEn(hm);
+			const use_ar = (frappe.boot?.lang || frappe.lang || "en").startsWith("ar");
 
-			let html = this.nav_html(`${ar}, ${hy}`);
+			let html = this.nav_html(`${use_ar ? ar : en}, ${hy}`);
 			const day_names = [
 				__("Su"),
 				__("Mo"),
@@ -427,14 +429,21 @@
 			html += `<div class="hijri-dp-cells hijri-dp-cells-months">`;
 			const sel = this.selected,
 				today = this.get_now_date();
+			const use_ar = (frappe.boot?.lang || frappe.lang || "en").startsWith("ar");
 			for (let m = 1; m <= 12; m++) {
 				let cls = "hijri-dp-cell hijri-dp-month";
 				if (sel && hy === sel.year && m === sel.month) cls += " -sel-";
 				if (hy === today.year && m === today.month) cls += " -cur-";
-				html += `<div class="${cls}" data-month="${m}">
-					<span class="hijri-dp-mar">${frappe_hijri.hijri.getMonthName(m)}</span>
-					<span class="hijri-dp-men">${frappe_hijri.hijri.getMonthNameEn(m)}</span>
-				</div>`;
+				if (use_ar) {
+					html += `<div class="${cls}" data-month="${m}">
+						<span class="hijri-dp-mar">${frappe_hijri.hijri.getMonthName(m)}</span>
+						<span class="hijri-dp-men">${frappe_hijri.hijri.getMonthNameEn(m)}</span>
+					</div>`;
+				} else {
+					html += `<div class="${cls}" data-month="${m}">
+						<span class="hijri-dp-mar">${frappe_hijri.hijri.getMonthNameEn(m)}</span>
+					</div>`;
+				}
 			}
 			html += `</div>`;
 			html += this.footer_html();
