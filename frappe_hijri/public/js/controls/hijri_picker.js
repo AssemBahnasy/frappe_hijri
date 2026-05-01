@@ -215,6 +215,7 @@
 			const en = frappe_hijri.hijri.getMonthNameEn(hm);
 			const use_ar = (frappe.boot?.lang || frappe.lang || "en").startsWith("ar");
 
+			// Day-view header: full name, one language — mirrors "April, 2026"
 			let html = this.nav_html(`${use_ar ? ar : en}, ${hy}`);
 			const day_names = [
 				__("Su"),
@@ -435,13 +436,15 @@
 				if (sel && hy === sel.year && m === sel.month) cls += " -sel-";
 				if (hy === today.year && m === today.month) cls += " -cur-";
 				if (use_ar) {
+					// Arabic: primary Arabic name + English subtitle
 					html += `<div class="${cls}" data-month="${m}">
 						<span class="hijri-dp-mar">${frappe_hijri.hijri.getMonthName(m)}</span>
-						<span class="hijri-dp-men">${frappe_hijri.hijri.getMonthNameEn(m)}</span>
+						<span class="hijri-dp-men">${frappe_hijri.hijri.getMonthNameShort(m)}</span>
 					</div>`;
 				} else {
+					// English: abbreviated name only — mirrors "Jan / Feb / Mar" compact style
 					html += `<div class="${cls}" data-month="${m}">
-						<span class="hijri-dp-mar">${frappe_hijri.hijri.getMonthNameEn(m)}</span>
+						<span class="hijri-dp-mar">${frappe_hijri.hijri.getMonthNameShort(m)}</span>
 					</div>`;
 				}
 			}

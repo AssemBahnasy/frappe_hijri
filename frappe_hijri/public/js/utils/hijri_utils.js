@@ -153,6 +153,29 @@ frappe_hijri.hijri = (function () {
     }
 
     /**
+     * Get abbreviated Hijri month name (English) — mirrors "Jan / Feb / Mar" style.
+     * Used in the month-picker grid when the UI language is not Arabic.
+     */
+    function getMonthNameShort(month) {
+        const months = [
+            "",
+            "Muh",     // Muharram
+            "Saf",     // Safar
+            "Rab I",   // Rabi al-Awwal
+            "Rab II",  // Rabi al-Thani
+            "Jum I",   // Jumada al-Ula
+            "Jum II",  // Jumada al-Akhirah
+            "Raj",     // Rajab
+            "Sha",     // Shaban
+            "Ram",     // Ramadan
+            "Shaw",    // Shawwal
+            "Dhu Q",   // Dhul Qadah
+            "Dhu H",   // Dhul Hijjah
+        ];
+        return months[month] || "";
+    }
+
+    /**
      * Get the configured Hijri date format (e.g. "dd-mm-yyyy").
      * Falls back to "yyyy-mm-dd" if boot info is not available.
      */
@@ -212,6 +235,7 @@ frappe_hijri.hijri = (function () {
         isHijriLeapYear,
         getMonthName,
         getMonthNameEn,
+        getMonthNameShort,
         getDateFormat,
         formatHijriDate,
         parseHijriDate,
