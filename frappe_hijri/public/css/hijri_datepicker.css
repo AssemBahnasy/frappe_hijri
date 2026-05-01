@@ -153,10 +153,11 @@
 }
 
 /* ── Month cells ────────────────────────────────────────────────────────────── */
+/* Single-line label (Arabic or abbreviated English) — no column layout needed */
 .hijri-dp-month {
-	flex-direction: column;
-	gap: 1px;
-	padding: 4px 2px;
+	font-size: var(--text-xs);
+	font-weight: var(--weight-medium, 500);
+	text-align: center;
 }
 
 /* ── Year cells ─────────────────────────────────────────────────────────────── */
@@ -194,36 +195,6 @@
 	opacity: 0.5;
 }
 
-/* ── Month cell text ────────────────────────────────────────────────────────── */
-/* Arabic name (primary) */
-.hijri-dp-mar {
-	font-size: var(--text-xs);
-	font-weight: 600;
-	text-align: center;
-	line-height: 1.2;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	width: 100%;
-}
-
-/* English transliteration (secondary — compact subtitle) */
-.hijri-dp-men {
-	font-size: 9px;
-	color: var(--text-muted);
-	text-align: center;
-	line-height: 1.2;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	width: 100%;
-}
-
-/* Selected month cell — override muted colours */
-.-sel- .hijri-dp-men,
-.-sel- .hijri-dp-mar {
-	color: var(--date-active-text, #fff);
-}
 
 /* ── Footer ("Today" button) ────────────────────────────────────────────────── */
 .hijri-dp-footer {

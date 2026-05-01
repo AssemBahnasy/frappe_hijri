@@ -435,18 +435,10 @@
 				let cls = "hijri-dp-cell hijri-dp-month";
 				if (sel && hy === sel.year && m === sel.month) cls += " -sel-";
 				if (hy === today.year && m === today.month) cls += " -cur-";
-				if (use_ar) {
-					// Arabic: primary Arabic name + English subtitle
-					html += `<div class="${cls}" data-month="${m}">
-						<span class="hijri-dp-mar">${frappe_hijri.hijri.getMonthName(m)}</span>
-						<span class="hijri-dp-men">${frappe_hijri.hijri.getMonthNameShort(m)}</span>
-					</div>`;
-				} else {
-					// English: abbreviated name only — mirrors "Jan / Feb / Mar" compact style
-					html += `<div class="${cls}" data-month="${m}">
-						<span class="hijri-dp-mar">${frappe_hijri.hijri.getMonthNameShort(m)}</span>
-					</div>`;
-				}
+				const label = use_ar
+					? frappe_hijri.hijri.getMonthName(m)
+					: frappe_hijri.hijri.getMonthNameShort(m);
+				html += `<div class="${cls}" data-month="${m}">${label}</div>`;
 			}
 			html += `</div>`;
 			html += this.footer_html();
