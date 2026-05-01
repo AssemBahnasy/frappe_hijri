@@ -99,6 +99,13 @@ def register_hijri_date_type_map():
     if frappe.db and hasattr(frappe.db, "type_map") and "Hijri Date" not in frappe.db.type_map:
         frappe.db.type_map["Hijri Date"] = ("varchar", 10)
     _patch_docfield_fieldtype_options()
+    # Patch frappe.utils.formatters.format_value to handle "Hijri Date".
+    # Mirrors the "Date" / "Datetime" branches in frappe/utils/formatters.py:65-69.
+    try:
+        from frappe_hijri.utils.formatters import patch_format_value
+        patch_format_value()
+    except Exception:
+        pass
 
 
 def _patch_docfield_fieldtype_options():

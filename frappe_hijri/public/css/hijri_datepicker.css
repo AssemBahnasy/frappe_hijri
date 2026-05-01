@@ -1,211 +1,270 @@
 /*
  * Hijri Date Picker — standalone styles (no air-datepicker dependency).
- * Visually matches Frappe's native datepicker using CSS variables.
+ * Visually matches Frappe's native datepicker using CSS variables exclusively
+ * for automatic light/dark theme compatibility.
+ *
+ * The picker (.hijri-dp) is appended to document.body and positioned via JS
+ * (_hijri_picker.js → _position()), so it is never clipped by overflow:hidden
+ * containers (modals, sidebars, Quick Entry dialogs).
+ * Mirrors the body-appended strategy used by Frappe's air-datepicker.
  */
 
-/* Container */
+/* ── Container ─────────────────────────────────────────────────────────────── */
+/* position + top + left are set at runtime by _HijriPicker._position().        */
 .hijri-dp {
-    position: absolute;
-    left: 0;
-    top: 100%;
-    z-index: 9999;
-    width: 280px;
-    background: var(--fg-color);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow-2xl);
-    font-family: inherit;
-    font-size: var(--text-sm);
-    overflow: hidden;
-    padding: 4px 0;
+	position: absolute;
+	display: none;
+	z-index: 9999;
+	width: 280px;
+	background: var(--fg-color);
+	color: var(--text-color);
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius-lg);
+	box-shadow: var(--shadow-2xl);
+	font-family: inherit;
+	font-size: var(--text-sm);
+	overflow: hidden;
+	padding: 4px 0;
 }
 
-/* ── Nav ── */
+/* ── Navigation bar ─────────────────────────────────────────────────────────── */
 .hijri-dp-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 8px 4px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 8px 4px;
 }
 
 .hijri-dp-nav-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    user-select: none;
-    color: var(--text-muted);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: var(--border-radius-sm);
+	cursor: pointer;
+	user-select: none;
+	color: var(--text-muted);
+	flex-shrink: 0;
 }
 
 .hijri-dp-nav-btn:hover {
-    background: var(--fg-hover-color);
-    color: var(--text-color);
+	background: var(--fg-hover-color);
+	color: var(--text-color);
 }
 
+/* Clickable title — zooms out to month or year view */
 .hijri-dp-nav-title {
-    flex: 1;
-    text-align: center;
-    font-weight: var(--weight-semibold, 600);
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: var(--border-radius-sm);
-    font-size: var(--text-sm);
+	flex: 1;
+	text-align: center;
+	font-weight: var(--weight-semibold, 600);
+	cursor: pointer;
+	padding: 4px 8px;
+	border-radius: var(--border-radius-sm);
+	font-size: var(--text-sm);
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .hijri-dp-nav-title:hover {
-    background: var(--fg-hover-color);
+	background: var(--fg-hover-color);
 }
 
-/* ── Day Names ── */
+/* ── Day-of-week header ─────────────────────────────────────────────────────── */
 .hijri-dp-days-names {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    padding: 8px 8px 0;
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	padding: 8px 8px 0;
 }
 
 .hijri-dp-dn {
-    text-align: center;
-    font-size: var(--text-xs);
-    color: var(--text-muted);
-    padding: 4px 0;
-    text-transform: uppercase;
-    font-weight: var(--weight-semibold, 600);
+	text-align: center;
+	font-size: var(--text-xs);
+	color: var(--text-muted);
+	padding: 4px 0;
+	text-transform: uppercase;
+	font-weight: var(--weight-semibold, 600);
 }
 
-/* ── Cells (shared) ── */
+/* ── Cell grid (days / months / years) ─────────────────────────────────────── */
 .hijri-dp-cells {
-    display: grid;
-    padding: 4px 8px;
-    gap: 0;
+	display: grid;
+	padding: 4px 8px;
+	gap: 0;
 }
 
 .hijri-dp-cells-days {
-    grid-template-columns: repeat(7, 1fr);
+	grid-template-columns: repeat(7, 1fr);
 }
 
 .hijri-dp-cells-months {
-    grid-template-columns: repeat(3, 1fr);
+	grid-template-columns: repeat(3, 1fr);
 }
 
 .hijri-dp-cells-years {
-    grid-template-columns: repeat(4, 1fr);
+	grid-template-columns: repeat(4, 1fr);
 }
 
 .hijri-dp-cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    border-radius: var(--border-radius);
-    transition: background 0.15s;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	border-radius: var(--border-radius);
+	transition: background 0.15s;
 }
 
 .hijri-dp-cell:hover {
-    background: var(--fg-hover-color);
+	background: var(--fg-hover-color);
 }
 
-/* Day cells */
+/* ── Day cells ──────────────────────────────────────────────────────────────── */
 .hijri-dp-day {
-    height: 36px;
-    width: 36px;
-    margin: 0 auto;
-    font-size: var(--text-sm);
+	height: 36px;
+	width: 36px;
+	margin: 0 auto;
+	font-size: var(--text-sm);
 }
 
 /* Overflow days from adjacent months */
 .hijri-dp-day.-other- {
-    color: var(--text-muted);
-    opacity: 0.5;
-    cursor: pointer;
+	color: var(--text-muted);
+	opacity: 0.5;
+	cursor: pointer;
 }
 
 .hijri-dp-day.-other-:hover {
-    background: var(--fg-hover-color);
-    opacity: 0.7;
+	background: var(--fg-hover-color);
+	opacity: 0.7;
 }
 
-/* Empty cells (placeholder, no interaction) */
-.hijri-dp-empty {
-    cursor: default;
-}
-
-.hijri-dp-empty:hover {
-    background: none;
-}
-
-/* Month cells */
+/* ── Month cells ────────────────────────────────────────────────────────────── */
 .hijri-dp-month {
-    flex-direction: column;
-    gap: 2px;
-    padding: 10px 4px;
+	flex-direction: column;
+	gap: 2px;
+	padding: 10px 4px;
+	/* min-height prevents variable-length Arabic names from causing uneven rows */
+	min-height: 56px;
 }
 
-/* Year cells */
+/* ── Year cells ─────────────────────────────────────────────────────────────── */
 .hijri-dp-year {
-    padding: 12px 4px;
+	padding: 12px 4px;
 }
 
-/* ── States ── */
+/* ── State modifiers ────────────────────────────────────────────────────────── */
+
+/* Selected day/month/year */
 .-sel- {
-    background: var(--primary);
-    color: #fff;
-    font-weight: var(--weight-bold, 700);
-    border-radius: var(--border-radius);
+	background: var(--primary);
+	color: #fff;
+	font-weight: var(--weight-bold, 700);
+	border-radius: var(--border-radius);
 }
 
 .-sel-:hover {
-    background: var(--primary);
+	background: var(--primary);
 }
 
+/* Today / current month / current year (when not selected) */
 .-cur-:not(.-sel-) {
-    font-weight: var(--weight-bold, 700);
-    color: var(--primary);
+	font-weight: var(--weight-bold, 700);
+	color: var(--primary);
 }
 
+/* Adjacent-period overflow cells */
 .-other- {
-    color: var(--text-muted);
-    opacity: 0.5;
+	color: var(--text-muted);
+	opacity: 0.5;
 }
 
-/* Month cell inner text */
+/* ── Month cell text ────────────────────────────────────────────────────────── */
+/* Arabic name (primary) */
 .hijri-dp-mar {
-    font-size: var(--text-sm);
-    font-weight: 600;
+	font-size: var(--text-sm);
+	font-weight: 600;
 }
 
+/* English transliteration (secondary) */
 .hijri-dp-men {
-    font-size: var(--text-xs);
-    color: var(--text-muted);
+	font-size: var(--text-xs);
+	color: var(--text-muted);
 }
 
+/* White text on selected month cell */
 .-sel- .hijri-dp-men,
 .-sel- .hijri-dp-mar {
-    color: #fff;
+	color: #fff;
 }
 
-/* ── Footer ── */
+/* ── Footer ("Today" button) ────────────────────────────────────────────────── */
 .hijri-dp-footer {
-    border-top: 1px solid var(--border-color);
-    margin-top: 4px;
-    padding: 4px;
+	border-top: 1px solid var(--border-color);
+	margin-top: 4px;
+	padding: 4px;
 }
 
 .hijri-dp-today {
-    display: block;
-    padding: 7px 16px;
-    cursor: pointer;
-    font-size: var(--text-sm);
-    color: var(--text-muted);
-    font-weight: var(--weight-medium, 500);
-    text-align: center;
-    border-radius: var(--border-radius-sm);
+	display: block;
+	padding: 7px 16px;
+	cursor: pointer;
+	font-size: var(--text-sm);
+	color: var(--text-muted);
+	font-weight: var(--weight-medium, 500);
+	text-align: center;
+	border-radius: var(--border-radius-sm);
 }
 
 .hijri-dp-today:hover {
-    background: var(--fg-hover-color);
-    color: var(--text-color);
+	background: var(--fg-hover-color);
+	color: var(--text-color);
+}
+
+/* ── Range selection (ControlHijriDateRange) ────────────────────────────────── */
+/*
+ * Applied by HijriPicker when opts.range = true.
+ * Mirrors air-datepicker's range highlight: start/end cells use the primary
+ * accent colour; in-between cells use a faded background so the range is
+ * visually clear without being too heavy.
+ */
+
+/* In-range cells (between start and end) */
+.-range- {
+	background: var(--fg-hover-color);
+	border-radius: 0;
+	color: var(--text-color);
+}
+
+.-range-:hover {
+	background: var(--fg-hover-color);
+	opacity: 0.85;
+}
+
+/* Range start cell */
+.-range-start- {
+	background: var(--primary);
+	color: #fff;
+	font-weight: var(--weight-bold, 700);
+	border-radius: var(--border-radius) 0 0 var(--border-radius);
+}
+
+/* Range end cell */
+.-range-end- {
+	background: var(--primary);
+	color: #fff;
+	font-weight: var(--weight-bold, 700);
+	border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+
+/* Same-day range (start = end) */
+.-range-start-.-range-end- {
+	border-radius: var(--border-radius);
+}
+
+.-range-start-:hover,
+.-range-end-:hover {
+	background: var(--primary);
+	opacity: 0.85;
 }
