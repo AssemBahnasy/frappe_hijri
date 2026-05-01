@@ -102,7 +102,7 @@ frappe_hijri.hijri.hijriMonthDays(1446, 10);       // 29
 | "Hijri Date" not in fieldtype dropdown | `bench --site your-site install-app frappe_hijri` |
 | Empty box in Form Builder | `bench build --app frappe_hijri` |
 | Date format not applying | Refresh the page after saving Hijri Settings |
-| `ModuleNotFoundError: hijri_converter` | `bench setup requirements` or `pip install hijri-converter` |
+| `ModuleNotFoundError: hijri_converter` | `bench setup requirements` or `bench pip install hijri-converter` |
 
 ---
 
