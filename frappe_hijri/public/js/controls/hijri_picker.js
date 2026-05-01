@@ -212,9 +212,8 @@
 			const g1 = frappe_hijri.hijri.hijriToGregorian(hy, hm, 1);
 			const dow = new Date(g1.year, g1.month - 1, g1.day).getDay();
 			const ar = frappe_hijri.hijri.getMonthName(hm);
-			const en = frappe_hijri.hijri.getMonthNameEn(hm);
 
-			let html = this.nav_html(`${ar} ${en}, ${hy}`);
+			let html = this.nav_html(`${ar}, ${hy}`);
 			const day_names = [
 				__("Su"),
 				__("Mo"),
