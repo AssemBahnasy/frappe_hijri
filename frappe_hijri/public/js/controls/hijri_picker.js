@@ -168,11 +168,11 @@
 		nav_html(title) {
 			return `<div class="hijri-dp-nav">
 				<div class="hijri-dp-nav-btn" data-action="prev">
-					<svg class="icon icon-sm"><use href="#icon-left"></use></svg>
+					<svg class="icon icon-md"><use href="#icon-left"></use></svg>
 				</div>
 				<div class="hijri-dp-nav-title">${title}</div>
 				<div class="hijri-dp-nav-btn" data-action="next">
-					<svg class="icon icon-sm"><use href="#icon-right"></use></svg>
+					<svg class="icon icon-md"><use href="#icon-right"></use></svg>
 				</div>
 			</div>`;
 		}
@@ -216,7 +216,7 @@
 			const use_ar = (frappe.boot?.lang || frappe.lang || "en").startsWith("ar");
 
 			// Day-view header: full name, one language — mirrors "April, 2026"
-			let html = this.nav_html(`${use_ar ? ar : en}, ${hy}`);
+			let html = this.nav_html(`${use_ar ? ar : en}, <span class="hijri-dp-nav-year">${hy}</span>`);
 			const day_names = [
 				__("Su"),
 				__("Mo"),

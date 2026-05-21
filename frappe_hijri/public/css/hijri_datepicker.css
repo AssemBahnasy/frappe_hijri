@@ -19,6 +19,7 @@
 	display: none;
 	z-index: 9999;
 	width: 250px;
+	box-sizing: border-box;
 	background: var(--fg-color);
 	color: var(--text-color);
 	border: 1px solid var(--border-color);
@@ -49,28 +50,33 @@
 	border-radius: var(--border-radius-sm);
 	cursor: pointer;
 	user-select: none;
-	color: var(--text-muted);
+	color: #9c9c9c;
 	flex-shrink: 0;
 }
 
 .hijri-dp-nav-btn:hover {
-	background: var(--fg-hover-color);
-	color: var(--text-color);
+	background: #f0f0f0;
+}
+
+.hijri-dp-nav-btn svg {
+	fill: none;
+	stroke: #9c9c9c;
+	stroke-width: 2px;
 }
 
 /* Clickable title — zooms out to month or year view */
 .hijri-dp-nav-title {
-	flex: 1;
 	text-align: center;
 	font-weight: var(--weight-semibold, 600);
 	cursor: pointer;
 	padding: 4px 8px;
 	border-radius: var(--border-radius-sm);
 	font-size: var(--text-sm);
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+}
+
+.hijri-dp-nav-year {
+	color: #9c9c9c;
+	margin-left: 5px;
 }
 
 .hijri-dp-nav-title:hover {
@@ -83,7 +89,6 @@
 	display: grid;
 	grid-template-columns: repeat(7, 1fr);
 	margin: 8px 0 3px;
-	padding: 0 4px;
 }
 
 .hijri-dp-dn {
@@ -92,13 +97,12 @@
 	color: var(--text-muted);
 	padding: 2px 0;
 	text-transform: uppercase;
-	font-weight: var(--weight-semibold, 600);
 }
 
 /* ── Cell grid (days / months / years) ─────────────────────────────────────── */
 .hijri-dp-cells {
 	display: grid;
-	padding: 4px;
+	padding: 4px 0;
 	gap: 0;
 }
 
