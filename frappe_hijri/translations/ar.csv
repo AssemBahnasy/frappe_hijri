@@ -84,6 +84,7 @@ Phone,الهاتف,
 Phone No,رقم الهاتف,
 Portal Users,مستخدمي البوابة,
 Postal Code,الرمز البريدي,
+Posting Date,تاريخ الإصدار,
 
 
 Reference,المرجع,
@@ -104,6 +105,8 @@ Registration Details,تفاصيل التسجيل,
 Report,تقرير,
 Report View,عرض التقرير,
 "Roles & Permissions",الأدوار والصلاحيات,
+Reset Desktop Layout,إعادة ضبط سطح المكتب،
+
 
 
 Saved Filters,الفلاتر المحفوظة,
