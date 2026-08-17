@@ -4,6 +4,7 @@ app_publisher = "AssemBahnasy"
 app_description = "An app that incorporates the Hijri Islamic calendar as a new date field in Frappe framework"
 app_email = "bahnasyassem@gmail.com"
 app_license = "mit"
+app_logo_url = "/assets/frappe_hijri/icons/desktop_icons/solid/hijri.svg"
 
 # Apps
 # ------------------
