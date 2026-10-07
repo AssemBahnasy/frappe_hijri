@@ -11,6 +11,16 @@ app_logo_url = "/assets/frappe_hijri/icons/desktop_icons/solid/hijri.svg"
 
 # required_apps = []
 
+# Each item in the list will be shown as an app in the apps page
+add_to_apps_screen = [
+	{
+		"name": "frappe_hijri",
+		"logo": "/assets/frappe_hijri/icons/desktop_icons/solid/hijri.svg",
+		"title": "Hijri",
+		"route": "/desk/hijri-settings",
+	}
+]
+
 # Includes in <head>
 # ------------------
 
@@ -40,7 +50,7 @@ app_include_css = "/assets/frappe_hijri/css/hijri_datepicker.css"
 # Svg Icons
 # ------------------
 # include app icons in desk
-# app_include_icons = "frappe_hijri/public/icons.svg"
+app_include_icons = ["/assets/frappe_hijri/icons/module-icons.svg"]
 
 # Home Pages
 # ----------
